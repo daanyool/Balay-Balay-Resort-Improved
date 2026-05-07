@@ -18,25 +18,22 @@
             <!-- Profile Picture Upload -->
             <div class="profile-upload-wrapper">
                 <div class="profile-avatar" id="avatarCircle"
-                     style="position:relative;width:90px;height:90px;border-radius:50%;background:rgba(55,28,8,0.80);border:2px solid rgba(200,164,110,0.55);display:flex;align-items:center;justify-content:center;color:rgba(200,164,110,0.85);overflow:hidden;cursor:pointer;flex-shrink:0;"
-                     onclick="document.getElementById('profilePicInput').click()">
+                     onclick="document.getElementById('profilePicInput').click()"
+                     style="cursor:pointer;width:90px;height:90px;">
                     <svg id="avatarSvg" xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
                         <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z" />
                     </svg>
-                    <img id="avatarPreview" src="" alt="Preview"
-                         style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+                    <img id="avatarPreview" src="" alt="Preview" style="display:none;" />
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:8px;">
-                    <p class="profile-upload-label" style="margin:0;font-size:0.82rem;color:#7a5530;font-weight:500;">Upload Profile Picture</p>
-                    <button type="button" class="profile-upload-btn" onclick="document.getElementById('profilePicInput').click()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
-                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
-                        </svg>
-                        Choose Photo
-                    </button>
-                </div>
+                <p class="profile-upload-label" style="margin-top:10px;">Upload Profile Picture</p>
+                <button type="button" class="profile-upload-btn" style="margin-top:8px;" onclick="document.getElementById('profilePicInput').click()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
+                    </svg>
+                    Choose Photo
+                </button>
                 <input asp-for="ProfilePicture" type="file" id="profilePicInput" accept="image/*" style="display:none;" />
             </div>
 

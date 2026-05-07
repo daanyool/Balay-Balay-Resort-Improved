@@ -80,9 +80,11 @@ public class HomeController : Controller
 
         if (!string.IsNullOrWhiteSpace(search))
         {
+            var s = search.Trim().ToLower();
             query = query.Where(p =>
-                p.Property_Name.Contains(search) ||
-                p.UnitNumber.ToString().Contains(search));
+                (p.Property_Name != null && p.Property_Name.ToLower().Contains(s)) ||
+                p.UnitNumber.ToString().Contains(s) ||
+                (p.Description != null && p.Description.ToLower().Contains(s)));
         }
 
         ViewBag.SearchQuery = search;
@@ -464,20 +466,31 @@ public class HomeController : Controller
         if (!string.IsNullOrWhiteSpace(search))
         {
             string s = search.Trim();
+            string sLower = s.ToLower();
 
+            // Try parsing as a plain number, OR strip "BK"/"TXN" prefix (e.g. "BK001" -> 1)
             bool isNumber = int.TryParse(s, out int searchId);
+            if (!isNumber)
+            {
+                var stripped = System.Text.RegularExpressions.Regex.Replace(s, @"[^\d]", "");
+                if (!string.IsNullOrWhiteSpace(stripped) && int.TryParse(stripped, out int idFromPrefix))
+                {
+                    searchId = idFromPrefix;
+                    isNumber = true;
+                }
+            }
 
             bookingsQuery = bookingsQuery.Where(b =>
-                (b.Status != null && b.Status.Contains(s)) ||
-                (b.Property != null && b.Property.Property_Name.Contains(s)) ||
-                (b.Transaction != null && b.Transaction.PaymentMode.Contains(s)) ||
+                (b.Status != null && b.Status.ToLower().Contains(sLower)) ||
+                (b.Property != null && b.Property.Property_Name != null && b.Property.Property_Name.ToLower().Contains(sLower)) ||
+                (b.Transaction != null && b.Transaction.PaymentMode != null && b.Transaction.PaymentMode.ToLower().Contains(sLower)) ||
                 (isNumber && b.Booking_ID == searchId)
             );
 
             transactionsQuery = transactionsQuery.Where(t =>
-                (t.PaymentMode != null && t.PaymentMode.Contains(s)) ||
-                (t.ReferenceNum != null && t.ReferenceNum.Contains(s)) ||
-                (t.Status != null && t.Status.Contains(s)) ||
+                (t.PaymentMode != null && t.PaymentMode.ToLower().Contains(sLower)) ||
+                (t.ReferenceNum != null && t.ReferenceNum.ToLower().Contains(sLower)) ||
+                (t.Status != null && t.Status.ToLower().Contains(sLower)) ||
                 (isNumber && t.Transaction_ID == searchId) ||
                 (isNumber && t.Booking_ID == searchId)
             );

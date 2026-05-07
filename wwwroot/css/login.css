@@ -343,32 +343,34 @@
 }
 
 .profile-upload-btn {
-    position: absolute;
-    bottom: 18px;
-    right: calc(50% - 46px);
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #c8a46e;
-    border: 2px solid rgba(40, 20, 5, 0.6);
-    color: #2a1500;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #c8a46e 0%, #a0762e 100%);
+    color: #2a1500;
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 600;
     cursor: pointer;
-    padding: 0;
-    transition: background 0.2s;
+    transition: opacity 0.2s, transform 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    white-space: nowrap;
 }
 
 .profile-upload-btn:hover {
-    background: #f5deb3;
+    opacity: 0.92;
+    transform: translateY(-1px);
 }
 
 .profile-upload-label {
-    font-size: 0.68rem;
-    color: rgba(200, 164, 110, 0.70);
-    margin-top: 4px;
+    font-size: 0.78rem;
+    color: rgba(245, 222, 179, 0.90);
     letter-spacing: 0.3px;
+    margin: 0;
+    font-weight: 500;
 }
 
 /* ---- Responsive ---- */

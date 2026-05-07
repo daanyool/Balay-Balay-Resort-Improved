@@ -89,9 +89,18 @@ public class AdminController : Controller
 
         if (!string.IsNullOrWhiteSpace(search))
         {
+            var s = search.Trim().ToLower();
+            bool isActiveFilter   = s == "active";
+            bool isInactiveFilter = s == "inactive";
+
             query = query.Where(p =>
-                p.Property_Name.Contains(search) ||
-                p.UnitNumber.ToString().Contains(search));
+                (p.Property_Name != null && p.Property_Name.ToLower().Contains(s)) ||
+                p.UnitNumber.ToString().Contains(s) ||
+                (p.Description != null && p.Description.ToLower().Contains(s)) ||
+                p.Amenity_Properties.Any(ap => ap.Amenity != null && ap.Amenity.Amenity_Name.ToLower().Contains(s)) ||
+                (isActiveFilter && p.IsActive) ||
+                (isInactiveFilter && !p.IsActive)
+            );
         }
 
         var vm = new AdminPropertiesViewModel
@@ -268,13 +277,16 @@ public class AdminController : Controller
 
         if (!string.IsNullOrWhiteSpace(search))
         {
+            var s = search.Trim();
             items = items.Where(t =>
-                t.TransactionId.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                t.BookingId.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                t.PropertyName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                t.Method.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                t.Reference.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                t.Status.Contains(search, StringComparison.OrdinalIgnoreCase));
+                (t.TransactionId ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (t.BookingId ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (t.PropertyName ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (t.Method ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (t.Reference ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (t.Status ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (t.Date ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                t.Amount.ToString().Contains(s, StringComparison.OrdinalIgnoreCase));
         }
 
         var list = items.ToList();
