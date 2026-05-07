@@ -105,7 +105,7 @@ public class HomeController : Controller
                 .ThenInclude(ap => ap.Amenity)
             .FirstOrDefaultAsync(p => p.Property_ID == id);
 
-        if (property == null)
+        if (property == null || !property.IsActive)
         {
             return NotFound();
         }
@@ -127,7 +127,7 @@ public class HomeController : Controller
         var property = await _context.Properties
             .FirstOrDefaultAsync(p => p.Property_ID == id);
 
-        if (property == null)
+        if (property == null || !property.IsActive)
         {
             return NotFound();
         }
@@ -276,6 +276,12 @@ public class HomeController : Controller
         if (property == null)
         {
             return NotFound();
+        }
+
+        if (!property.IsActive)
+        {
+            TempData["Error"] = "This unit is no longer available for booking.";
+            return RedirectToAction(nameof(BrowseProperties));
         }
 
         if (CheckInDate == default || CheckOutDate == default)

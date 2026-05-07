@@ -1297,12 +1297,47 @@
 
 .mybookings-filter-btn:hover { background: #e8d5bc; }
 
-/* Two-column layout */
+/* Two-column layout (legacy) */
 .mybookings-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     align-items: start;
+}
+
+/* Paired headings row (column titles above cards) */
+.mybookings-paired-headings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* Paired booking + transaction list */
+.mybookings-paired-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Each row: one booking card on the left, one txn card on the right */
+.booking-transaction-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: stretch;
+}
+
+.paired-col {
+    display: flex;
+}
+
+.paired-card {
+    flex: 1;
+    margin-bottom: 0 !important;
+    display: flex;
+    flex-direction: column;
 }
 
 .mybookings-col-title {
@@ -1312,7 +1347,38 @@
     font-size: 1rem;
     font-weight: 700;
     color: #1a0e05;
-    margin-bottom: 14px;
+    margin-bottom: 0;
+}
+
+/* Cancel Booking button */
+.cancel-booking-form {
+    margin-top: auto;
+    padding-top: 14px;
+}
+
+.mybooking-cancel-btn {
+    width: 100%;
+    padding: 11px 14px;
+    background: #1a0e05;
+    color: #ffffff;
+    border: none;
+    border-radius: 9px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.15s;
+}
+
+.mybooking-cancel-btn:hover {
+    background: #2a1500;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 800px) {
+    .mybookings-paired-headings,
+    .booking-transaction-row {
+        grid-template-columns: 1fr;
+    }
 }
 
 .mybookings-empty {
@@ -1359,9 +1425,15 @@
 }
 
 .mybooking-status.confirmed  { background: #e6f4ea; color: #2e7d32; }
-.mybooking-status.pending    { background: #fce4ec; color: #c62828; }
+.mybooking-status.pending    { background: #fef3c7; color: #b45309; } /* amber for booking pending */
 .mybooking-status.cancelled  { background: #fdecea; color: #b71c1c; }
 .mybooking-status.completed  { background: #e6f4ea; color: #2e7d32; }
+
+/* Pink "Pending" badge on transaction (orange) cards only */
+.txn-card .mybooking-status.pending {
+    background: #fce4ec;
+    color: #c62828;
+}
 
 .mybooking-card-id {
     font-size: 0.76rem;

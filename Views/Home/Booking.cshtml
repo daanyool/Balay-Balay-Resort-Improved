@@ -4,9 +4,11 @@
     ViewData["Title"] = "Complete Your Booking";
     Layout = "_DashboardLayout";
 
-    var imagePath = string.IsNullOrWhiteSpace(Model.PropertyImagePath)
-        ? "/images/bg-login.png"
-        : Model.PropertyImagePath;
+    var imagePath = (Model.PropertyImagePath ?? "")
+        .Split(',')
+        .Select(x => x.Trim())
+        .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x))
+        ?? "/images/bg-login.png";
 }
 
 <div class="booking-wrapper">

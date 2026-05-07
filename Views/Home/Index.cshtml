@@ -6,6 +6,10 @@
 
     var recommendedProperties = ViewBag.RecommendedProperties as List<Property>;
     var recentBookings = ViewBag.RecentBookings as List<Booking>;
+
+    // Helper: extract first image from comma-separated path
+    Func<string?, string> firstImg = (path) =>
+        (path ?? "").Split(',').FirstOrDefault(x => !string.IsNullOrWhiteSpace(x))?.Trim() ?? "/images/bg-login.png";
 }
 
 <!-- Hero Banner -->
@@ -71,8 +75,7 @@
 
                     <a href="/property/@property.Property_ID" class="property-card" style="text-decoration:none; color:inherit;">
                         <div class="property-card-img">
-                            <img src="@(string.IsNullOrWhiteSpace(property.PropertyImagePath) ? "/images/bg-login.png" : property.PropertyImagePath)"
-                                 alt="@property.Property_Name" />
+                            <img src="@firstImg(property.PropertyImagePath)" alt="@property.Property_Name" />
                         </div>
 
                         <div class="property-card-body">
@@ -131,8 +134,7 @@
                 {
                     <a href="/my-bookings" class="booking-card" style="text-decoration:none; color:inherit;">
                         <div class="booking-card-img">
-                            <img src="@(string.IsNullOrWhiteSpace(booking.Property?.PropertyImagePath) ? "/images/bg-login.png" : booking.Property.PropertyImagePath)"
-                                 alt="@booking.Property?.Property_Name" />
+                            <img src="@firstImg(booking.Property?.PropertyImagePath)" alt="@booking.Property?.Property_Name" />
                         </div>
 
                         <div class="booking-card-body">
