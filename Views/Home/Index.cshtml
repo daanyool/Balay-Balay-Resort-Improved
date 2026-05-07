@@ -22,21 +22,19 @@
             @{
                 var profileImg  = ViewBag.ProfileImagePath as string;
                 var fullName    = ViewBag.FullName as string ?? "";
-                var initials    = string.Concat(
-                    fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                            .Take(2)
-                            .Select(w => char.ToUpper(w[0])));
-                if (string.IsNullOrWhiteSpace(initials)) initials = "?";
+                const string defaultAvatar = "/images/default-avatar.svg";
+
+                // Treat the seeded placeholder path as "no image"
+                var hasRealImage = !string.IsNullOrWhiteSpace(profileImg)
+                                && !profileImg.EndsWith("profile-picture.jpg", StringComparison.OrdinalIgnoreCase);
+
+                var imageSrc = hasRealImage ? profileImg : defaultAvatar;
             }
             <a href="/edit-profile" class="dash-hero-avatar" title="Edit Profile">
-                @if (!string.IsNullOrWhiteSpace(profileImg))
-                {
-                    <img src="@profileImg" alt="Profile Picture" class="dash-profile-img" />
-                }
-                else
-                {
-                    <span class="dash-avatar-initials">@initials</span>
-                }
+                <img src="@imageSrc"
+                     alt="@fullName"
+                     class="dash-profile-img"
+                     onerror="this.src='@defaultAvatar';" />
             </a>
 
             <div class="dash-hero-info">
