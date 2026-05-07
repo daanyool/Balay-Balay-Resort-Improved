@@ -13,15 +13,21 @@
         <div class="admin-txn-stat-label">Total Transactions</div>
         <div class="admin-txn-stat-value">@Model.TotalTransactions</div>
     </div>
-
     <div class="admin-txn-stat-card">
         <div class="admin-txn-stat-label">Total Revenue</div>
         <div class="admin-txn-stat-value">&#8369;@Model.TotalRevenue.ToString("N0")</div>
     </div>
-
     <div class="admin-txn-stat-card">
-        <div class="admin-txn-stat-label">Completed</div>
-        <div class="admin-txn-stat-value">@Model.Completed</div>
+        <div class="admin-txn-stat-label" style="color:#16a34a;">Completed</div>
+        <div class="admin-txn-stat-value" style="color:#16a34a;">@Model.Completed</div>
+    </div>
+    <div class="admin-txn-stat-card">
+        <div class="admin-txn-stat-label" style="color:#ca8a04;">Pending</div>
+        <div class="admin-txn-stat-value" style="color:#ca8a04;">@Model.Pending</div>
+    </div>
+    <div class="admin-txn-stat-card">
+        <div class="admin-txn-stat-label" style="color:#dc2626;">Cancelled</div>
+        <div class="admin-txn-stat-value" style="color:#dc2626;">@Model.Cancelled</div>
     </div>
 </div>
 

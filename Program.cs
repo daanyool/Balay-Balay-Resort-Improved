@@ -1,5 +1,6 @@
 using Balay_Balay_Resort.Data;
 using Balay_Balay_Resort.Models;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,11 +8,27 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDbContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSession();
 
+// Allow large file uploads (100 MB)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 104_857_600; // 100 MB
+});
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 104_857_600; // 100 MB
+});
+
 var app = builder.Build();
+
+// Pre-create the property images upload directory
+var uploadsDir = Path.Combine(builder.Environment.WebRootPath, "images", "properties");
+if (!Directory.Exists(uploadsDir))
+    Directory.CreateDirectory(uploadsDir);
 
 using (var scope = app.Services.CreateScope())
 {
@@ -48,6 +65,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // serves dynamically uploaded files (images/properties/)
 app.UseRouting();
 
 app.UseSession();

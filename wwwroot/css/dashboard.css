@@ -165,6 +165,15 @@
     border-radius: 50%;
 }
 
+.dash-avatar-initials {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #c8a46e;
+    letter-spacing: 1px;
+    user-select: none;
+    line-height: 1;
+}
+
 .dash-hero-info { display: flex; flex-direction: column; gap: 3px; }
 
 .dash-hero-title {
@@ -644,6 +653,27 @@
 .detail-img-arrow:hover { background: #fff; }
 .detail-img-arrow.left { left: 14px; }
 .detail-img-arrow.right { right: 14px; }
+
+.detail-img-dots {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 3;
+}
+
+.detail-img-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.detail-img-dot.active { background: #fff; }
 
 /* ---- Two Column Layout ---- */
 .detail-layout {

@@ -51,11 +51,11 @@
 
                 var reviewCount = property.Feedbacks?.Count ?? 0;
 
+                var thumbImg = (property.PropertyImagePath ?? "").Split(',').FirstOrDefault(x => !string.IsNullOrWhiteSpace(x))?.Trim() ?? "/images/bg-login.png";
                 <a href="/property/@property.Property_ID" class="property-card-link">
                     <div class="property-card">
                         <div class="property-card-img">
-                            <img src="@(string.IsNullOrWhiteSpace(property.PropertyImagePath) ? "/images/bg-login.png" : property.PropertyImagePath)"
-                                 alt="@property.Property_Name" />
+                            <img src="@thumbImg" alt="@property.Property_Name" />
 
                             <div class="property-card-tag">@property.Property_Name.ToUpper()</div>
                         </div>

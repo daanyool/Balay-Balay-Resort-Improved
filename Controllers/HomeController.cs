@@ -42,12 +42,13 @@ public class HomeController : Controller
         }
 
         var recommendedProperties = await _context.Properties
-       .Include(p => p.Feedbacks)
-       .OrderByDescending(p => p.Feedbacks.Any()
-           ? p.Feedbacks.Average(f => f.ReviewRate)
-           : 0)
-       .Take(4)
-       .ToListAsync();
+           .Where(p => p.IsActive)
+           .Include(p => p.Feedbacks)
+           .OrderByDescending(p => p.Feedbacks.Any()
+               ? p.Feedbacks.Average(f => f.ReviewRate)
+               : 0)
+           .Take(4)
+           .ToListAsync();
 
         var recentBookings = await _context.Bookings
             .Include(b => b.Property)
@@ -73,6 +74,7 @@ public class HomeController : Controller
     public async Task<IActionResult> BrowseProperties(string search = "")
     {
         var query = _context.Properties
+            .Where(p => p.IsActive)
             .Include(p => p.Feedbacks)
             .AsQueryable();
 

@@ -16,9 +16,13 @@
         .Select(ap => ap.Amenity!.Amenity_Name)
         .ToList() ?? new List<string>();
 
-    var imagePath = string.IsNullOrWhiteSpace(Model.PropertyImagePath)
-        ? "/images/bg-login.png"
-        : Model.PropertyImagePath;
+    var images = (Model.PropertyImagePath ?? "")
+        .Split(',')
+        .Select(x => x.Trim())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .ToList();
+
+    if (!images.Any()) images.Add("/images/bg-login.png");
 }
 
 <div class="detail-wrapper">
@@ -33,13 +37,48 @@
         </a>
     </div>
 
-    <!-- Hero Image -->
+    <!-- Hero Image / Carousel -->
     <div class="detail-img-wrap">
-        <img src="@imagePath" alt="@Model.Property_Name" class="detail-img" />
+        @if (images.Count == 1)
+        {
+            <img src="@images[0]" alt="@Model.Property_Name" class="detail-img" id="mainPropertyImg" />
+        }
+        else
+        {
+            <img src="@images[0]" alt="@Model.Property_Name" class="detail-img" id="mainPropertyImg" />
+            <button class="detail-img-arrow left" onclick="changeImg(-1)">&#8249;</button>
+            <button class="detail-img-arrow right" onclick="changeImg(1)">&#8250;</button>
+            <!-- Dot indicators -->
+            <div class="detail-img-dots">
+                @for (int i = 0; i < images.Count; i++)
+                {
+                    <span class="detail-img-dot @(i == 0 ? "active" : "")" onclick="goToImg(@i)"></span>
+                }
+            </div>
+        }
         <div class="detail-img-tag">@Model.Property_Name.ToUpper()</div>
-        <button class="detail-img-arrow left">&#8249;</button>
-        <button class="detail-img-arrow right">&#8250;</button>
     </div>
+
+    @if (images.Count > 1)
+    {
+        <script>
+            const propImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(images));
+            let currentImg = 0;
+
+            function changeImg(dir) {
+                currentImg = (currentImg + dir + propImages.length) % propImages.length;
+                goToImg(currentImg);
+            }
+
+            function goToImg(idx) {
+                currentImg = idx;
+                document.getElementById('mainPropertyImg').src = propImages[idx];
+                document.querySelectorAll('.detail-img-dot').forEach((d, i) => {
+                    d.classList.toggle('active', i === idx);
+                });
+            }
+        </script>
+    }
 
     <!-- Two Column Layout -->
     <div class="detail-layout">

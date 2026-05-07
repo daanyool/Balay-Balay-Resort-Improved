@@ -90,9 +90,13 @@ else
     <div class="admin-props-grid">
         @foreach (var p in Model.Properties)
         {
-            <div class="admin-prop-card">
-                <div class="admin-prop-img">
-                    <img src="@p.PropertyImagePath" alt="@p.Property_Name" />
+            var firstImage = (p.PropertyImagePath ?? "").Split(',').FirstOrDefault(x => !string.IsNullOrWhiteSpace(x))?.Trim() ?? "/images/bg-login.png";
+            <div class="admin-prop-card @(!p.IsActive ? " admin-prop-card-inactive" : "")">
+                <div class="admin-prop-img" style="position:relative;">
+                    <img src="@firstImage" alt="@p.Property_Name" />
+                    <span class="admin-prop-status-badge @(p.IsActive ? "badge-active" : "badge-inactive")">
+                        @(p.IsActive ? "● Active" : "● Inactive")
+                    </span>
                 </div>
                 <div class="admin-prop-body">
                     <div class="admin-prop-unit">Unit #@p.UnitNumber</div>
@@ -153,14 +157,29 @@ else
                             Edit
                         </button>
 
-                        <!-- Delete trigger (opens custom modal) -->
-                        <button type="button" class="admin-prop-delete-btn"
-                                onclick="openDeleteModal(@p.Property_ID, '@p.Property_Name.Replace("'", "\\'")' )">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
-                                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
-                            </svg>
-                            Delete
+                        <!-- Deactivate / Activate toggle -->
+                        <button type="button"
+                                class="@(p.IsActive ? "admin-prop-deactivate-btn" : "admin-prop-activate-btn")"
+                                data-pid="@p.Property_ID"
+                                data-pname="@Html.Encode(p.Property_Name)"
+                                data-active="@p.IsActive.ToString().ToLower()"
+                                onclick="openToggleFromBtn(this)">
+                            @if (p.IsActive)
+                            {
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                </svg>
+                                <span>Deactivate</span>
+                            }
+                            else
+                            {
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                                </svg>
+                                <span>Activate</span>
+                            }
                         </button>
                     </div>
                 </div>
@@ -179,7 +198,7 @@ else
                 <button type="button" class="admin-unit-modal-close" data-bs-dismiss="modal">&times;</button>
             </div>
 
-            <form method="post" action="/admin/properties/add" enctype="multipart/form-data" class="d-flex flex-column h-100">
+            <form method="post" action="/admin/properties/add" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div class="admin-unit-modal-body">
 
@@ -222,18 +241,18 @@ else
                     <!-- Unit Images -->
                     <p class="admin-unit-section-label">Unit Images</p>
                     <div class="admin-unit-field">
-                        <label class="admin-unit-label">Image</label>
-                        <label class="admin-upload-area" for="addImageInput">
+                        <label class="admin-unit-label">Images <span style="color:#9ca3af;font-weight:400;">(select multiple)</span></label>
+                        <label class="admin-upload-area" for="addImageInput" id="addUploadArea">
                             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#9ca3af" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
                                 <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
                             </svg>
-                            <span class="admin-upload-text">Click to upload additional images</span>
+                            <span class="admin-upload-text">Click to upload images</span>
                             <span class="admin-upload-sub">You can select multiple files</span>
-                            <span class="admin-upload-filenames" id="addFileNames"></span>
                         </label>
                         <input type="file" id="addImageInput" name="ImageFiles" multiple accept="image/*"
-                               style="display:none" onchange="showFileNames(this,'addFileNames')" />
+                               style="display:none" onchange="previewImages(this, 'addPreviewGrid')" />
+                        <div class="admin-img-preview-grid" id="addPreviewGrid"></div>
                     </div>
 
                     <!-- Amenities -->
@@ -266,7 +285,7 @@ else
                 <button type="button" class="admin-unit-modal-close" data-bs-dismiss="modal">&times;</button>
             </div>
 
-            <form method="post" action="/admin/properties/edit/0" id="editPropertyForm" enctype="multipart/form-data" class="d-flex flex-column h-100">
+            <form method="post" action="/admin/properties/edit/0" id="editPropertyForm" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="Id" id="editId" />
                 <div class="admin-unit-modal-body">
@@ -310,18 +329,20 @@ else
                     <!-- Unit Images -->
                     <p class="admin-unit-section-label">Unit Images</p>
                     <div class="admin-unit-field">
-                        <label class="admin-unit-label">Image</label>
-                        <label class="admin-upload-area" for="editImageInput">
+                        <label class="admin-unit-label">Images <span style="color:#9ca3af;font-weight:400;">(select multiple to replace)</span></label>
+                        <!-- Current images preview -->
+                        <div class="admin-img-preview-grid" id="editCurrentGrid"></div>
+                        <label class="admin-upload-area" for="editImageInput" style="margin-top:8px;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#9ca3af" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
                                 <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
                             </svg>
-                            <span class="admin-upload-text">Click to upload additional images</span>
-                            <span class="admin-upload-sub">You can select multiple files</span>
-                            <span class="admin-upload-filenames" id="editFileNames"></span>
+                            <span class="admin-upload-text">Click to upload new images</span>
+                            <span class="admin-upload-sub">Selecting new images will replace existing ones</span>
                         </label>
                         <input type="file" id="editImageInput" name="ImageFiles" multiple accept="image/*"
-                               style="display:none" onchange="showFileNames(this,'editFileNames')" />
+                               style="display:none" onchange="previewImages(this, 'editNewGrid')" />
+                        <div class="admin-img-preview-grid" id="editNewGrid"></div>
                     </div>
 
                     <!-- Amenities -->
@@ -349,58 +370,78 @@ else
     </div>
 </div>
 
-<!-- ===================== DELETE CONFIRMATION MODAL ===================== -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+<!-- ===================== TOGGLE STATUS MODAL ===================== -->
+<div class="modal fade" id="toggleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered admin-delete-dialog">
         <div class="modal-content admin-delete-content">
-
-            <!-- Icon -->
             <div class="admin-delete-icon-wrap">
-                <div class="admin-delete-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
-                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                <div class="admin-delete-icon" id="toggleModalIcon"
+                     style="background:#fee2e2;color:#dc2626;">
+                    <svg id="toggleModalSvg" xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>
                 </div>
             </div>
-
-            <h5 class="admin-delete-title">Delete Unit</h5>
+            <h5 class="admin-delete-title" id="toggleModalTitle">Deactivate Unit</h5>
             <p class="admin-delete-msg">
-                Are you sure you want to delete<br />
-                <strong id="deletePropertyName"></strong>?<br />
-                <span class="admin-delete-warning">This action cannot be undone.</span>
+                <span id="toggleModalMsg"></span><br />
+                <strong id="toggleModalName"></strong>?<br />
+                <span class="admin-delete-warning" id="toggleModalWarning">The unit will be hidden from guests and no new bookings can be made. Existing bookings remain intact.</span>
             </p>
-
             <div class="admin-delete-actions">
                 <button type="button" class="admin-delete-cancel-btn" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="admin-delete-confirm-btn" onclick="confirmDelete()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
-                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
-                    </svg>
-                    Yes, Delete
-                </button>
+                <button type="button" class="admin-delete-confirm-btn" id="toggleModalBtn" onclick="confirmToggle()">Confirm</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Hidden delete form (submitted by JS) -->
-<form method="post" id="deleteForm" style="display:none">
+<!-- Hidden toggle form -->
+<form method="post" id="toggleForm" style="display:none">
     @Html.AntiForgeryToken()
 </form>
 
 @section Scripts {
     <script>
-        // Delete modal
-        function openDeleteModal(id, name) {
-            document.getElementById('deletePropertyName').textContent = name;
-            document.getElementById('deleteForm').action = '/admin/properties/delete/' + id;
-            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        function openToggleFromBtn(btn) {
+            openToggleModal(btn.dataset.pid, btn.dataset.pname, btn.dataset.active);
         }
 
-        function confirmDelete() {
-            document.getElementById('deleteForm').submit();
+        function openToggleModal(id, name, isActive) {
+            const deactivating = isActive === true || isActive === 'true';
+            document.getElementById('toggleModalName').textContent = name;
+            document.getElementById('toggleForm').action = '/admin/properties/toggle/' + id;
+
+            const icon   = document.getElementById('toggleModalIcon');
+            const title  = document.getElementById('toggleModalTitle');
+            const msg    = document.getElementById('toggleModalMsg');
+            const warn   = document.getElementById('toggleModalWarning');
+            const btn    = document.getElementById('toggleModalBtn');
+
+            if (deactivating) {
+                icon.style.background = '#fee2e2';
+                icon.style.color      = '#dc2626';
+                title.textContent     = 'Deactivate Unit';
+                msg.textContent       = 'Are you sure you want to deactivate';
+                warn.textContent      = 'The unit will be hidden from guests. Existing bookings remain intact.';
+                btn.style.background  = '#dc2626';
+                btn.textContent       = '🔴 Yes, Deactivate';
+            } else {
+                icon.style.background = '#dcfce7';
+                icon.style.color      = '#16a34a';
+                title.textContent     = 'Activate Unit';
+                msg.textContent       = 'Are you sure you want to activate';
+                warn.textContent      = 'The unit will be visible to guests and available for booking.';
+                btn.style.background  = '#16a34a';
+                btn.textContent       = '🟢 Yes, Activate';
+            }
+
+            new bootstrap.Modal(document.getElementById('toggleModal')).show();
+        }
+
+        function confirmToggle() {
+            document.getElementById('toggleForm').submit();
         }
 
         // Pre-fill Edit modal
@@ -422,13 +463,29 @@ else
             document.getElementById('editAmenitiesHidden').value = '';
             const saved = btn.dataset.amenities || '';
             if (saved) saved.split(',').filter(Boolean).forEach(a => createTag('edit', a.trim()));
+
+            // Show existing images as thumbnails
+            const imagePaths = (btn.dataset.image || '').split(',').filter(x => x.trim());
+            const currentGrid = document.getElementById('editCurrentGrid');
+            currentGrid.innerHTML = '';
+            document.getElementById('editNewGrid').innerHTML = '';
+            document.getElementById('editImageInput').value = '';
+            imagePaths.forEach(path => {
+                const wrap = document.createElement('div');
+                wrap.className = 'admin-preview-thumb';
+                const img = document.createElement('img');
+                img.src = path.trim();
+                wrap.appendChild(img);
+                currentGrid.appendChild(wrap);
+            });
         });
 
         // Clear Add modal when opened
         document.getElementById('addPropertyModal').addEventListener('show.bs.modal', function () {
             document.getElementById('addAmenityTags').innerHTML = '';
             document.getElementById('addAmenitiesHidden').value = '';
-            document.getElementById('addFileNames').textContent = '';
+            document.getElementById('addPreviewGrid').innerHTML = '';
+            document.getElementById('addImageInput').value = '';
         });
 
         // Add amenity tag
@@ -460,10 +517,45 @@ else
                 Array.from(tags).map(t => t.textContent.replace('×','').trim()).join(',');
         }
 
-        // Show selected file names in upload area
-        function showFileNames(input, spanId) {
-            const names = Array.from(input.files).map(f => f.name).join(', ');
-            document.getElementById(spanId).textContent = names;
+        // Show image thumbnails in a preview grid
+        function previewImages(input, gridId) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = '';
+            const files = Array.from(input.files);
+            if (!files.length) return;
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'admin-preview-thumb';
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    wrap.appendChild(img);
+                    grid.appendChild(wrap);
+                };
+                reader.readAsDataURL(file);
+            });
         }
+
+        // Show existing images in edit modal
+        document.getElementById('editPropertyModal').addEventListener('show.bs.modal', function(e) {
+            const btn = e.relatedTarget;
+            const imagePaths = (btn.dataset.image || '').split(',').filter(x => x.trim());
+            const grid = document.getElementById('editCurrentGrid');
+            grid.innerHTML = '';
+            document.getElementById('editNewGrid').innerHTML = '';
+
+            if (imagePaths.length) {
+                imagePaths.forEach(path => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'admin-preview-thumb';
+                    const img = document.createElement('img');
+                    img.src = path.trim();
+                    wrap.appendChild(img);
+                    grid.appendChild(wrap);
+                });
+            }
+        });
     </script>
 }

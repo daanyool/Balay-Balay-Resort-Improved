@@ -17,6 +17,8 @@ public class AdminTransactionsViewModel
     public int TotalTransactions { get; set; }
     public decimal TotalRevenue { get; set; }
     public int Completed { get; set; }
+    public int Cancelled { get; set; }
+    public int Pending { get; set; }
     public List<TransactionItem> Transactions { get; set; } = new();
     public string SearchQuery { get; set; } = "";
 }

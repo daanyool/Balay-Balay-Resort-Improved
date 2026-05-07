@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Balay_Balay_Resort.Data;
 using Balay_Balay_Resort.Models;
@@ -109,6 +110,8 @@ public class AdminController : Controller
     [Route("properties/add")]
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = 104_857_600)]
     public async Task<IActionResult> AddProperty(
         string Name,
         int UnitNumber,
@@ -159,6 +162,8 @@ public class AdminController : Controller
     [Route("properties/edit/{id}")]
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = 104_857_600)]
     public async Task<IActionResult> EditProperty(
         int id,
         string Name,
@@ -214,43 +219,25 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Properties));
     }
 
-    // ===================== DELETE PROPERTY =====================
-    [Route("properties/delete/{id}")]
+    // ===================== TOGGLE PROPERTY STATUS (soft delete) =====================
+    [Route("properties/toggle/{id}")]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteProperty(int id)
+    public async Task<IActionResult> TogglePropertyStatus(int id)
     {
         var property = await _context.Properties
-            .Include(p => p.Amenity_Properties)
-            .Include(p => p.Feedbacks)
-            .Include(p => p.Bookings)
             .FirstOrDefaultAsync(p => p.Property_ID == id);
 
         if (property == null)
-        {
             return NotFound();
-        }
 
-        if (property.Bookings.Any())
-        {
-            TempData["Error"] = "This property cannot be deleted because it already has bookings.";
-            return RedirectToAction(nameof(Properties));
-        }
-
-        if (property.Amenity_Properties.Any())
-        {
-            _context.Amenities_Properties.RemoveRange(property.Amenity_Properties);
-        }
-
-        if (property.Feedbacks.Any())
-        {
-            _context.Feedbacks.RemoveRange(property.Feedbacks);
-        }
-
-        _context.Properties.Remove(property);
+        property.IsActive = !property.IsActive;
         await _context.SaveChangesAsync();
 
-        TempData["Success"] = "Property unit deleted successfully.";
+        TempData["Success"] = property.IsActive
+            ? $"Unit \"{property.Property_Name}\" has been activated."
+            : $"Unit \"{property.Property_Name}\" has been deactivated.";
+
         return RedirectToAction(nameof(Properties));
     }
 
@@ -295,15 +282,15 @@ public class AdminController : Controller
         var vm = new AdminTransactionsViewModel
         {
             TotalTransactions = list.Count,
-
-            // Only completed transactions should count as revenue
             TotalRevenue = list
                 .Where(t => string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase))
                 .Sum(t => t.Amount),
-
             Completed = list.Count(t =>
                 string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase)),
-
+            Cancelled = list.Count(t =>
+                string.Equals(t.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)),
+            Pending = list.Count(t =>
+                string.Equals(t.Status, "Pending", StringComparison.OrdinalIgnoreCase)),
             Transactions = list,
             SearchQuery = search
         };
@@ -471,44 +458,39 @@ public class AdminController : Controller
     }
 
     // ===================== IMAGE SAVE HELPER =====================
+    // Saves ALL uploaded images and returns comma-separated paths
     private async Task<string?> SavePropertyImage(List<IFormFile>? imageFiles)
     {
         if (imageFiles == null || !imageFiles.Any())
-        {
             return null;
-        }
-
-        var firstImage = imageFiles.FirstOrDefault();
-
-        if (firstImage == null || firstImage.Length == 0)
-        {
-            return null;
-        }
 
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-        var fileExtension = Path.GetExtension(firstImage.FileName).ToLowerInvariant();
-
-        if (!allowedExtensions.Contains(fileExtension))
-        {
-            return null;
-        }
-
         var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "properties");
 
         if (!Directory.Exists(uploadsFolder))
-        {
             Directory.CreateDirectory(uploadsFolder);
-        }
 
-        var fileName = $"{Guid.NewGuid()}{fileExtension}";
-        var filePath = Path.Combine(uploadsFolder, fileName);
+        var savedPaths = new List<string>();
 
-        using (var stream = new FileStream(filePath, FileMode.Create))
+        foreach (var file in imageFiles)
         {
-            await firstImage.CopyToAsync(stream);
+            if (file == null || file.Length == 0) continue;
+
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(ext)) continue;
+
+            var fileName = $"{Guid.NewGuid()}{ext}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            savedPaths.Add($"/images/properties/{fileName}");
         }
 
-        return $"/images/properties/{fileName}";
+        return savedPaths.Any() ? string.Join(",", savedPaths) : null;
     }
 
     // ===================== SAVE AMENITIES HELPER =====================

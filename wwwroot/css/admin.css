@@ -447,12 +447,61 @@
 
 .admin-prop-edit-btn:hover { background: #dbeafe; }
 
-.admin-prop-delete-btn {
+.admin-prop-deactivate-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
     background: #fff1f2;
     color: #e11d48;
+    transition: opacity 0.18s;
 }
 
-.admin-prop-delete-btn:hover { background: #ffe4e6; }
+.admin-prop-deactivate-btn:hover { background: #ffe4e6; }
+
+.admin-prop-activate-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #f0fdf4;
+    color: #16a34a;
+    transition: opacity 0.18s;
+}
+
+.admin-prop-activate-btn:hover { background: #dcfce7; }
+
+/* Status badge on card image */
+.admin-prop-status-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.badge-active   { background: rgba(220,252,231,0.92); color: #16a34a; }
+.badge-inactive { background: rgba(254,226,226,0.92); color: #dc2626; }
+
+/* Dim inactive cards */
+.admin-prop-card-inactive { opacity: 0.65; }
 
 .admin-prop-actions form { flex: 1; display: flex; }
 .admin-prop-actions form .admin-prop-delete-btn { width: 100%; }
@@ -461,8 +510,9 @@
    UNIT MODALS (Add Unit / Edit Unit)
    ============================================= */
 .admin-unit-modal-dialog {
-    max-width: 500px;
-    height: 90vh;
+    max-width: 520px;
+    max-height: calc(100vh - 40px);
+    margin: 20px auto;
 }
 
 .admin-unit-modal-content {
@@ -471,7 +521,16 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.14);
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    max-height: calc(100vh - 40px);
+    overflow: hidden;
+}
+
+/* Make the form inside the modal a flex column that fills available space */
+.admin-unit-modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -507,7 +566,8 @@
 .admin-unit-modal-body {
     padding: 20px 24px;
     overflow-y: auto;
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 /* Section label */
@@ -610,6 +670,30 @@
     margin-top: 4px;
 }
 
+/* Image preview grid */
+.admin-img-preview-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.admin-preview-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.admin-preview-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 /* Amenities */
 .admin-amenity-row {
     display: flex;
@@ -664,13 +748,16 @@
 
 .admin-amenity-tag button:hover { color: #111827; }
 
-/* Footer buttons */
+/* Footer buttons - sticky at bottom */
 .admin-unit-modal-footer {
     display: flex;
     gap: 10px;
     padding: 16px 24px 22px;
     border-top: 1px solid #f0f0f0;
     flex-shrink: 0;
+    background: #fff;
+    position: relative;
+    z-index: 2;
 }
 
 .admin-unit-submit-btn {
