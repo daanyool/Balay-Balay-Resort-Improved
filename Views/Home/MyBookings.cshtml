@@ -5,12 +5,8 @@
     ViewData["Title"] = "My Bookings & Transactions";
     Layout = "_DashboardLayout";
 
-    var bookings = (Model.Bookings ?? new List<Booking>())
-        .OrderByDescending(b => b.Booking_ID)
-        .ToList();
-
-    var transactions = (Model.Transactions ?? new List<Transaction>())
-        .ToList();
+    var bookings = Model.Bookings ?? new List<Booking>();
+    var transactions = (Model.Transactions ?? new List<Transaction>()).ToList();
 
     var transactionLookup = transactions
         .GroupBy(t => t.Booking_ID)
@@ -18,12 +14,24 @@
             g => g.Key,
             g => g.OrderByDescending(t => t.Transaction_ID).First()
         );
+
+    var statusFilter        = ViewBag.Status as string ?? "";
+    var paymentMethodFilter = ViewBag.PaymentMethod as string ?? "";
+    var fromDate            = ViewBag.FromDate as DateTime?;
+    var toDate              = ViewBag.ToDate as DateTime?;
+    var sortFilter          = ViewBag.Sort as string ?? "";
+
+    bool hasMyFilters = !string.IsNullOrWhiteSpace(statusFilter)
+                     || !string.IsNullOrWhiteSpace(paymentMethodFilter)
+                     || fromDate.HasValue
+                     || toDate.HasValue
+                     || !string.IsNullOrWhiteSpace(sortFilter);
 }
 
 <div class="mybookings-wrapper">
 
-    <!-- Search Bar -->
-    <form method="get" action="/my-bookings" class="mybookings-search-bar">
+    <!-- Search + Filter Bar -->
+    <form method="get" action="/my-bookings" class="mybookings-search-bar" id="myBookingsFilterForm">
         <div class="mybookings-search-input-wrap">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                  viewBox="0 0 16 16" class="mybookings-search-icon">
@@ -37,11 +45,66 @@
                    value="@Model.SearchQuery" />
         </div>
 
-        <button type="submit" class="mybookings-filter-btn" title="Search">
+        <button type="button" class="mybookings-filter-btn @(hasMyFilters ? "active" : "")" onclick="toggleMyBookingsFilter()" title="Filters">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2z" />
             </svg>
         </button>
+
+        <!-- Filter Panel -->
+        <div class="browse-filter-panel" id="myBookingsFilterPanel" style="@(hasMyFilters ? "display:block;" : "display:none;")">
+            <div class="filter-row">
+                <div class="filter-field">
+                    <label>Status</label>
+                    <select name="status">
+                        <option value=""           selected="@(statusFilter == "")">All</option>
+                        <option value="Confirmed"  selected="@(statusFilter == "Confirmed")">Confirmed</option>
+                        <option value="Pending"    selected="@(statusFilter == "Pending")">Pending</option>
+                        <option value="Cancelled"  selected="@(statusFilter == "Cancelled")">Cancelled</option>
+                        <option value="Completed"  selected="@(statusFilter == "Completed")">Completed</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label>Payment Method</label>
+                    <select name="paymentMethod">
+                        <option value=""              selected="@(paymentMethodFilter == "")">All</option>
+                        <option value="Cash"          selected="@(paymentMethodFilter == "Cash")">Cash</option>
+                        <option value="GCash"         selected="@(paymentMethodFilter == "GCash")">GCash</option>
+                        <option value="Bank Transfer" selected="@(paymentMethodFilter == "Bank Transfer")">Bank Transfer</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-field">
+                    <label>From Date</label>
+                    <input type="date" name="fromDate"
+                           value="@(fromDate?.ToString("yyyy-MM-dd") ?? "")" />
+                </div>
+                <div class="filter-field">
+                    <label>To Date</label>
+                    <input type="date" name="toDate"
+                           value="@(toDate?.ToString("yyyy-MM-dd") ?? "")" />
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-field" style="grid-column:1/-1;">
+                    <label>Sort by</label>
+                    <select name="sort">
+                        <option value=""           selected="@(sortFilter == "")">Newest</option>
+                        <option value="oldest"     selected="@(sortFilter == "oldest")">Oldest</option>
+                        <option value="price_desc" selected="@(sortFilter == "price_desc")">Price: High to Low</option>
+                        <option value="price_asc"  selected="@(sortFilter == "price_asc")">Price: Low to High</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <a href="/my-bookings" class="filter-clear-btn">Clear All</a>
+                <button type="submit" class="filter-apply-btn">Apply Filters</button>
+            </div>
+        </div>
     </form>
 
     <!-- Headings -->
@@ -179,3 +242,12 @@
 
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleMyBookingsFilter() {
+            const panel = document.getElementById('myBookingsFilterPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+}

@@ -79,7 +79,16 @@ public class AdminController : Controller
     // ===================== PROPERTIES PAGE =====================
     [Route("properties")]
     [HttpGet]
-    public async Task<IActionResult> Properties(string search = "")
+    public async Task<IActionResult> Properties(
+        string search = "",
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        int? guests = null,
+        int? bedrooms = null,
+        int? bathrooms = null,
+        double? minRating = null,
+        List<string>? amenities = null,
+        string sort = "")
     {
         var query = _context.Properties
             .Include(p => p.Feedbacks)
@@ -89,25 +98,76 @@ public class AdminController : Controller
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLower();
-            bool isActiveFilter   = s == "active";
-            bool isInactiveFilter = s == "inactive";
+            var s = search.Trim();
+            bool isActiveFilter   = s.Equals("active",   StringComparison.OrdinalIgnoreCase);
+            bool isInactiveFilter = s.Equals("inactive", StringComparison.OrdinalIgnoreCase);
 
-            query = query.Where(p =>
-                (p.Property_Name != null && p.Property_Name.ToLower().Contains(s)) ||
-                p.UnitNumber.ToString().Contains(s) ||
-                (p.Description != null && p.Description.ToLower().Contains(s)) ||
-                p.Amenity_Properties.Any(ap => ap.Amenity != null && ap.Amenity.Amenity_Name.ToLower().Contains(s)) ||
-                (isActiveFilter && p.IsActive) ||
-                (isInactiveFilter && !p.IsActive)
-            );
+            if (isActiveFilter)
+            {
+                query = query.Where(p => p.IsActive);
+            }
+            else if (isInactiveFilter)
+            {
+                query = query.Where(p => !p.IsActive);
+            }
+            else
+            {
+                query = query.Where(p =>
+                    p.Property_Name.Contains(s) ||
+                    p.UnitNumber.ToString().Contains(s) ||
+                    p.Description.Contains(s) ||
+                    p.Amenity_Properties.Any(ap => ap.Amenity.Amenity_Name.Contains(s))
+                );
+            }
         }
+
+        if (minPrice.HasValue)  query = query.Where(p => p.Amount >= minPrice.Value);
+        if (maxPrice.HasValue)  query = query.Where(p => p.Amount <= maxPrice.Value);
+        if (guests.HasValue    && guests.Value    > 0) query = query.Where(p => p.GuestCapacity >= guests.Value);
+        if (bedrooms.HasValue  && bedrooms.Value  > 0) query = query.Where(p => p.BedNum  >= bedrooms.Value);
+        if (bathrooms.HasValue && bathrooms.Value > 0) query = query.Where(p => p.BathNum >= bathrooms.Value);
+
+        if (amenities != null && amenities.Any())
+        {
+            foreach (var amenity in amenities.Where(a => !string.IsNullOrWhiteSpace(a)))
+            {
+                var a = amenity;
+                query = query.Where(p => p.Amenity_Properties.Any(ap => ap.Amenity.Amenity_Name == a));
+            }
+        }
+
+        var list = await query.ToListAsync();
+
+        if (minRating.HasValue && minRating.Value > 0)
+        {
+            list = list
+                .Where(p => p.Feedbacks.Any() && p.Feedbacks.Average(f => (double)f.ReviewRate) >= minRating.Value)
+                .ToList();
+        }
+
+        // Sort
+        list = sort switch
+        {
+            "price_asc"   => list.OrderBy(p => p.Amount).ToList(),
+            "price_desc"  => list.OrderByDescending(p => p.Amount).ToList(),
+            "rating"      => list.OrderByDescending(p =>
+                                p.Feedbacks.Any() ? p.Feedbacks.Average(f => (double)f.ReviewRate) : 0).ToList(),
+            "newest"      => list.OrderByDescending(p => p.Property_ID).ToList(),
+            _             => list.OrderBy(p => p.UnitNumber).ToList()  // default: by unit number
+        };
+
+        ViewBag.MinPrice  = minPrice;
+        ViewBag.MaxPrice  = maxPrice;
+        ViewBag.Guests    = guests;
+        ViewBag.Bedrooms  = bedrooms;
+        ViewBag.Bathrooms = bathrooms;
+        ViewBag.MinRating = minRating;
+        ViewBag.Amenities = amenities ?? new List<string>();
+        ViewBag.Sort      = sort;
 
         var vm = new AdminPropertiesViewModel
         {
-            Properties = await query
-                .OrderBy(p => p.UnitNumber)
-                .ToListAsync(),
+            Properties  = list,
             SearchQuery = search,
             NewProperty = new Property()
         };
@@ -253,13 +313,41 @@ public class AdminController : Controller
     // ===================== TRANSACTIONS PAGE =====================
     [Route("transactions")]
     [HttpGet]
-    public async Task<IActionResult> Transactions(string search = "")
+    public async Task<IActionResult> Transactions(
+        string search = "",
+        string status = "",
+        string paymentMethod = "",
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
+        decimal? minAmount = null,
+        decimal? maxAmount = null,
+        string sort = "")
     {
-        var transactions = await _context.Transactions
+        var transactionsQuery = _context.Transactions
             .Include(t => t.Booking)
                 .ThenInclude(b => b.Property)
-            .OrderByDescending(t => t.Status == "Cancelled")
-            .ThenByDescending(t => t.Date)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(status))
+            transactionsQuery = transactionsQuery.Where(t => t.Status == status);
+
+        if (!string.IsNullOrWhiteSpace(paymentMethod))
+            transactionsQuery = transactionsQuery.Where(t => t.PaymentMode == paymentMethod);
+
+        if (fromDate.HasValue)
+        {
+            var f = DateOnly.FromDateTime(fromDate.Value);
+            transactionsQuery = transactionsQuery.Where(t => t.Date >= f);
+        }
+
+        if (toDate.HasValue)
+        {
+            var to = DateOnly.FromDateTime(toDate.Value);
+            transactionsQuery = transactionsQuery.Where(t => t.Date <= to);
+        }
+
+        var transactions = await transactionsQuery
+            .OrderByDescending(t => t.Date)
             .ThenByDescending(t => t.Transaction_ID)
             .ToListAsync();
 
@@ -274,6 +362,12 @@ public class AdminController : Controller
             Reference = t.ReferenceNum ?? "N/A",
             Status = t.Status ?? "Pending"
         });
+
+        if (minAmount.HasValue)
+            items = items.Where(t => t.Amount >= minAmount.Value);
+
+        if (maxAmount.HasValue)
+            items = items.Where(t => t.Amount <= maxAmount.Value);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -290,6 +384,23 @@ public class AdminController : Controller
         }
 
         var list = items.ToList();
+
+        // Sort
+        list = sort switch
+        {
+            "oldest"      => list.OrderBy(t => t.Date).ThenBy(t => t.TransactionId).ToList(),
+            "amount_desc" => list.OrderByDescending(t => t.Amount).ToList(),
+            "amount_asc"  => list.OrderBy(t => t.Amount).ToList(),
+            _             => list  // default: newest (already ordered by date desc)
+        };
+
+        ViewBag.Status        = status;
+        ViewBag.PaymentMethod = paymentMethod;
+        ViewBag.FromDate      = fromDate;
+        ViewBag.ToDate        = toDate;
+        ViewBag.MinAmount     = minAmount;
+        ViewBag.MaxAmount     = maxAmount;
+        ViewBag.Sort          = sort;
 
         var vm = new AdminTransactionsViewModel
         {

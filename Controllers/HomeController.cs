@@ -71,27 +71,78 @@ public class HomeController : Controller
 
     [HttpGet]
     [Route("browse-properties")]
-    public async Task<IActionResult> BrowseProperties(string search = "")
+    public async Task<IActionResult> BrowseProperties(
+        string search = "",
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        int? guests = null,
+        int? bedrooms = null,
+        int? bathrooms = null,
+        double? minRating = null,
+        List<string>? amenities = null,
+        string sort = "")
     {
         var query = _context.Properties
             .Where(p => p.IsActive)
             .Include(p => p.Feedbacks)
+            .Include(p => p.Amenity_Properties)
+                .ThenInclude(ap => ap.Amenity)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLower();
+            var s = search.Trim();
             query = query.Where(p =>
-                (p.Property_Name != null && p.Property_Name.ToLower().Contains(s)) ||
+                p.Property_Name.Contains(s) ||
                 p.UnitNumber.ToString().Contains(s) ||
-                (p.Description != null && p.Description.ToLower().Contains(s)));
+                p.Description.Contains(s));
         }
 
-        ViewBag.SearchQuery = search;
+        if (minPrice.HasValue)  query = query.Where(p => p.Amount >= minPrice.Value);
+        if (maxPrice.HasValue)  query = query.Where(p => p.Amount <= maxPrice.Value);
+        if (guests.HasValue    && guests.Value    > 0) query = query.Where(p => p.GuestCapacity >= guests.Value);
+        if (bedrooms.HasValue  && bedrooms.Value  > 0) query = query.Where(p => p.BedNum  >= bedrooms.Value);
+        if (bathrooms.HasValue && bathrooms.Value > 0) query = query.Where(p => p.BathNum >= bathrooms.Value);
 
-        var properties = await query
-            .OrderByDescending(p => p.Property_ID)
-            .ToListAsync();
+        // Required amenities (all must be present)
+        if (amenities != null && amenities.Any())
+        {
+            foreach (var amenity in amenities.Where(a => !string.IsNullOrWhiteSpace(a)))
+            {
+                var a = amenity;
+                query = query.Where(p => p.Amenity_Properties.Any(ap => ap.Amenity.Amenity_Name == a));
+            }
+        }
+
+        var properties = await query.ToListAsync();
+
+        // Rating filter (in-memory because of average computation)
+        if (minRating.HasValue && minRating.Value > 0)
+        {
+            properties = properties
+                .Where(p => p.Feedbacks.Any() && p.Feedbacks.Average(f => (double)f.ReviewRate) >= minRating.Value)
+                .ToList();
+        }
+
+        // Sort
+        properties = sort switch
+        {
+            "price_asc"   => properties.OrderBy(p => p.Amount).ToList(),
+            "price_desc"  => properties.OrderByDescending(p => p.Amount).ToList(),
+            "rating"      => properties.OrderByDescending(p =>
+                                p.Feedbacks.Any() ? p.Feedbacks.Average(f => (double)f.ReviewRate) : 0).ToList(),
+            _             => properties.OrderByDescending(p => p.Property_ID).ToList()  // newest
+        };
+
+        ViewBag.SearchQuery = search;
+        ViewBag.MinPrice    = minPrice;
+        ViewBag.MaxPrice    = maxPrice;
+        ViewBag.Guests      = guests;
+        ViewBag.Bedrooms    = bedrooms;
+        ViewBag.Bathrooms   = bathrooms;
+        ViewBag.MinRating   = minRating;
+        ViewBag.Amenities   = amenities ?? new List<string>();
+        ViewBag.Sort        = sort;
 
         return View(properties);
     }
@@ -442,7 +493,13 @@ public class HomeController : Controller
 
     [HttpGet]
     [Route("my-bookings")]
-    public async Task<IActionResult> MyBookings(string search = "")
+    public async Task<IActionResult> MyBookings(
+        string search = "",
+        string status = "",
+        string paymentMethod = "",
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
+        string sort = "")
     {
         int? userId = GetCurrentUserId();
 
@@ -463,10 +520,35 @@ public class HomeController : Controller
             .Where(t => t.Booking != null && t.Booking.User_ID == userId.Value)
             .AsQueryable();
 
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            bookingsQuery     = bookingsQuery.Where(b => b.Status == status);
+            transactionsQuery = transactionsQuery.Where(t => t.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(paymentMethod))
+        {
+            bookingsQuery     = bookingsQuery.Where(b => b.Transaction != null && b.Transaction.PaymentMode == paymentMethod);
+            transactionsQuery = transactionsQuery.Where(t => t.PaymentMode == paymentMethod);
+        }
+
+        if (fromDate.HasValue)
+        {
+            bookingsQuery     = bookingsQuery.Where(b => b.CheckInDate >= fromDate.Value);
+            var fromDateOnly  = DateOnly.FromDateTime(fromDate.Value);
+            transactionsQuery = transactionsQuery.Where(t => t.Date >= fromDateOnly);
+        }
+
+        if (toDate.HasValue)
+        {
+            bookingsQuery     = bookingsQuery.Where(b => b.CheckInDate <= toDate.Value);
+            var toDateOnly    = DateOnly.FromDateTime(toDate.Value);
+            transactionsQuery = transactionsQuery.Where(t => t.Date <= toDateOnly);
+        }
+
         if (!string.IsNullOrWhiteSpace(search))
         {
             string s = search.Trim();
-            string sLower = s.ToLower();
 
             // Try parsing as a plain number, OR strip "BK"/"TXN" prefix (e.g. "BK001" -> 1)
             bool isNumber = int.TryParse(s, out int searchId);
@@ -481,32 +563,52 @@ public class HomeController : Controller
             }
 
             bookingsQuery = bookingsQuery.Where(b =>
-                (b.Status != null && b.Status.ToLower().Contains(sLower)) ||
-                (b.Property != null && b.Property.Property_Name != null && b.Property.Property_Name.ToLower().Contains(sLower)) ||
-                (b.Transaction != null && b.Transaction.PaymentMode != null && b.Transaction.PaymentMode.ToLower().Contains(sLower)) ||
+                b.Status.Contains(s) ||
+                b.Property.Property_Name.Contains(s) ||
+                (b.Transaction != null && b.Transaction.PaymentMode.Contains(s)) ||
                 (isNumber && b.Booking_ID == searchId)
             );
 
             transactionsQuery = transactionsQuery.Where(t =>
-                (t.PaymentMode != null && t.PaymentMode.ToLower().Contains(sLower)) ||
-                (t.ReferenceNum != null && t.ReferenceNum.ToLower().Contains(sLower)) ||
-                (t.Status != null && t.Status.ToLower().Contains(sLower)) ||
+                t.PaymentMode.Contains(s) ||
+                t.ReferenceNum.Contains(s) ||
+                t.Status.Contains(s) ||
                 (isNumber && t.Transaction_ID == searchId) ||
                 (isNumber && t.Booking_ID == searchId)
             );
         }
 
+        var bookingsList     = await bookingsQuery.ToListAsync();
+        var transactionsList = await transactionsQuery.ToListAsync();
+
+        // Sort
+        bookingsList = sort switch
+        {
+            "oldest"      => bookingsList.OrderBy(b => b.Booking_ID).ToList(),
+            "price_asc"   => bookingsList.OrderBy(b => b.TotalAmount).ToList(),
+            "price_desc"  => bookingsList.OrderByDescending(b => b.TotalAmount).ToList(),
+            _             => bookingsList.OrderByDescending(b => b.Booking_ID).ToList()  // newest
+        };
+
+        transactionsList = sort switch
+        {
+            "oldest"      => transactionsList.OrderBy(t => t.Transaction_ID).ToList(),
+            "price_asc"   => transactionsList.OrderBy(t => t.Booking?.TotalAmount ?? 0).ToList(),
+            "price_desc"  => transactionsList.OrderByDescending(t => t.Booking?.TotalAmount ?? 0).ToList(),
+            _             => transactionsList.OrderByDescending(t => t.Transaction_ID).ToList()
+        };
+
+        ViewBag.Status        = status;
+        ViewBag.PaymentMethod = paymentMethod;
+        ViewBag.FromDate      = fromDate;
+        ViewBag.ToDate        = toDate;
+        ViewBag.Sort          = sort;
+
         var vm = new MyBookingsViewModel
         {
-            Bookings = await bookingsQuery
-                .OrderByDescending(b => b.Booking_ID)
-                .ToListAsync(),
-
-            Transactions = await transactionsQuery
-                .OrderByDescending(t => t.Transaction_ID)
-                .ToListAsync(),
-
-            SearchQuery = search
+            Bookings     = bookingsList,
+            Transactions = transactionsList,
+            SearchQuery  = search
         };
 
         return View(vm);

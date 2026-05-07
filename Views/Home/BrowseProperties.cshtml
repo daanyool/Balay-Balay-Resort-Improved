@@ -5,12 +5,26 @@
     Layout = "_DashboardLayout";
 
     var searchQuery = ViewBag.SearchQuery as string ?? "";
+    var minPrice    = ViewBag.MinPrice as decimal?;
+    var maxPrice    = ViewBag.MaxPrice as decimal?;
+    var guests      = ViewBag.Guests as int?;
+    var bedrooms    = ViewBag.Bedrooms as int?;
+    var bathrooms   = ViewBag.Bathrooms as int?;
+    var minRating   = ViewBag.MinRating as double?;
+    var amenities   = ViewBag.Amenities as List<string> ?? new List<string>();
+    var sort        = ViewBag.Sort as string ?? "";
+
+    bool hasFilters = minPrice.HasValue || maxPrice.HasValue || guests.HasValue
+                   || bedrooms.HasValue || bathrooms.HasValue || minRating.HasValue
+                   || amenities.Any() || !string.IsNullOrWhiteSpace(sort);
+
+    var amenityList = new[] { "WiFi", "Parking", "Kitchen", "Beach Access", "Air Conditioning" };
 }
 
 <div class="browse-wrapper">
 
-    <!-- Search Bar -->
-    <form method="get" action="/browse-properties" class="browse-search-bar">
+    <!-- Search + Filter Bar -->
+    <form method="get" action="/browse-properties" id="browseFilterForm" class="browse-search-bar">
         <div class="browse-search-input-wrap">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                  viewBox="0 0 16 16" class="browse-search-icon">
@@ -24,12 +38,94 @@
                    value="@searchQuery" />
         </div>
 
-        <button type="submit" class="browse-filter-btn">
+        <button type="button" class="browse-filter-btn @(hasFilters ? "active" : "")" onclick="toggleFilterPanel()" title="Filters">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                  viewBox="0 0 16 16">
                 <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2z" />
             </svg>
         </button>
+
+        <!-- Filter Panel (collapsible) -->
+        <div class="browse-filter-panel" id="filterPanel" style="@(hasFilters ? "display:block;" : "display:none;")">
+            <div class="filter-row">
+                <div class="filter-field">
+                    <label>Min Price (₱)</label>
+                    <input type="number" name="minPrice" min="0" step="100"
+                           placeholder="0"
+                           value="@(minPrice?.ToString("0") ?? "")" />
+                </div>
+                <div class="filter-field">
+                    <label>Max Price (₱)</label>
+                    <input type="number" name="maxPrice" min="0" step="100"
+                           placeholder="Any"
+                           value="@(maxPrice?.ToString("0") ?? "")" />
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-field">
+                    <label>Min Guests</label>
+                    <input type="number" name="guests" min="1" max="50"
+                           placeholder="Any"
+                           value="@(guests?.ToString() ?? "")" />
+                </div>
+                <div class="filter-field">
+                    <label>Min Bedrooms</label>
+                    <input type="number" name="bedrooms" min="1" max="20"
+                           placeholder="Any"
+                           value="@(bedrooms?.ToString() ?? "")" />
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-field">
+                    <label>Min Bathrooms</label>
+                    <input type="number" name="bathrooms" min="1" max="20"
+                           placeholder="Any"
+                           value="@(bathrooms?.ToString() ?? "")" />
+                </div>
+                <div class="filter-field">
+                    <label>Min Rating</label>
+                    <select name="minRating">
+                        <option value=""    selected="@(!minRating.HasValue)">Any</option>
+                        <option value="3"   selected="@(minRating == 3)">3 &amp; up</option>
+                        <option value="4"   selected="@(minRating == 4)">4 &amp; up</option>
+                        <option value="5"   selected="@(minRating == 5)">5</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-field" style="grid-column:1/-1;">
+                <label>Amenities</label>
+                <div class="filter-amenities">
+                    @foreach (var a in amenityList)
+                    {
+                        var checkedAttr = amenities.Contains(a) ? "checked" : "";
+                        <label class="filter-amenity-chk">
+                            <input type="checkbox" name="amenities" value="@a" @checkedAttr />
+                            <span>@a</span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-field" style="grid-column:1/-1;">
+                    <label>Sort by</label>
+                    <select name="sort">
+                        <option value=""           selected="@(sort == "")">Newest</option>
+                        <option value="price_asc"  selected="@(sort == "price_asc")">Price: Low to High</option>
+                        <option value="price_desc" selected="@(sort == "price_desc")">Price: High to Low</option>
+                        <option value="rating"     selected="@(sort == "rating")">Top Rated</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <a href="/browse-properties" class="filter-clear-btn">Clear All</a>
+                <button type="submit" class="filter-apply-btn">Apply Filters</button>
+            </div>
+        </div>
     </form>
 
     <!-- Count -->
@@ -112,3 +208,12 @@
 
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleFilterPanel() {
+            const panel = document.getElementById('filterPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+}

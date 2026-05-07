@@ -2,6 +2,20 @@
 @{
     ViewData["Title"] = "Transactions";
     Layout = "_AdminLayout";
+
+    var statusFilter        = ViewBag.Status as string ?? "";
+    var paymentMethodFilter = ViewBag.PaymentMethod as string ?? "";
+    var fromDate            = ViewBag.FromDate as DateTime?;
+    var toDate              = ViewBag.ToDate as DateTime?;
+    var minAmount           = ViewBag.MinAmount as decimal?;
+    var maxAmount           = ViewBag.MaxAmount as decimal?;
+    var sortFilter          = ViewBag.Sort as string ?? "";
+
+    bool hasTxnFilters = !string.IsNullOrWhiteSpace(statusFilter)
+                      || !string.IsNullOrWhiteSpace(paymentMethodFilter)
+                      || fromDate.HasValue || toDate.HasValue
+                      || minAmount.HasValue || maxAmount.HasValue
+                      || !string.IsNullOrWhiteSpace(sortFilter);
 }
 
 <div class="admin-txn-page-header">
@@ -31,7 +45,7 @@
     </div>
 </div>
 
-<form method="get" action="/admin/transactions" class="admin-txn-search-bar">
+<form method="get" action="/admin/transactions" class="admin-txn-search-bar" id="adminTxnFilterForm">
     <div class="admin-props-search-wrap">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
              viewBox="0 0 16 16" class="admin-props-search-icon">
@@ -40,11 +54,78 @@
         <input type="text" name="search" class="admin-props-search-input"
                placeholder="Search Transactions" value="@Model.SearchQuery" />
     </div>
-    <button type="submit" class="admin-props-filter-btn" title="Search">
+    <button type="button" class="admin-props-filter-btn @(hasTxnFilters ? "active" : "")" onclick="toggleTxnFilter()" title="Filters">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
             <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2z" />
         </svg>
     </button>
+
+    <!-- Filter Panel -->
+    <div class="admin-filter-panel" id="adminTxnFilterPanel" style="@(hasTxnFilters ? "display:block;" : "display:none;")">
+        <div class="filter-row">
+            <div class="filter-field">
+                <label>Status</label>
+                <select name="status">
+                    <option value=""           selected="@(statusFilter == "")">All</option>
+                    <option value="Completed"  selected="@(statusFilter == "Completed")">Completed</option>
+                    <option value="Pending"    selected="@(statusFilter == "Pending")">Pending</option>
+                    <option value="Cancelled"  selected="@(statusFilter == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label>Payment Method</label>
+                <select name="paymentMethod">
+                    <option value=""              selected="@(paymentMethodFilter == "")">All</option>
+                    <option value="Cash"          selected="@(paymentMethodFilter == "Cash")">Cash</option>
+                    <option value="GCash"         selected="@(paymentMethodFilter == "GCash")">GCash</option>
+                    <option value="Bank Transfer" selected="@(paymentMethodFilter == "Bank Transfer")">Bank Transfer</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-field">
+                <label>From Date</label>
+                <input type="date" name="fromDate" value="@(fromDate?.ToString("yyyy-MM-dd") ?? "")" />
+            </div>
+            <div class="filter-field">
+                <label>To Date</label>
+                <input type="date" name="toDate" value="@(toDate?.ToString("yyyy-MM-dd") ?? "")" />
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-field">
+                <label>Min Amount (₱)</label>
+                <input type="number" name="minAmount" min="0" step="100"
+                       placeholder="0"
+                       value="@(minAmount?.ToString("0") ?? "")" />
+            </div>
+            <div class="filter-field">
+                <label>Max Amount (₱)</label>
+                <input type="number" name="maxAmount" min="0" step="100"
+                       placeholder="Any"
+                       value="@(maxAmount?.ToString("0") ?? "")" />
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-field" style="grid-column:1/-1;">
+                <label>Sort by</label>
+                <select name="sort">
+                    <option value=""            selected="@(sortFilter == "")">Newest</option>
+                    <option value="oldest"      selected="@(sortFilter == "oldest")">Oldest</option>
+                    <option value="amount_desc" selected="@(sortFilter == "amount_desc")">Amount: High to Low</option>
+                    <option value="amount_asc"  selected="@(sortFilter == "amount_asc")">Amount: Low to High</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="filter-actions">
+            <a href="/admin/transactions" class="filter-clear-btn">Clear All</a>
+            <button type="submit" class="filter-apply-btn">Apply Filters</button>
+        </div>
+    </div>
 </form>
 
 <div class="admin-txn-table-wrap">
@@ -103,17 +184,17 @@
 
                             <!-- EDIT TRANSACTION MODAL -->
                             <div class="modal fade" id="editTransactionModal-@transactionNumericId" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered">
-                                    <div class="modal-content" style="border-radius:14px; border:none; overflow:hidden;">
+                                <div class="modal-dialog modal-dialog-centered admin-txn-edit-dialog">
+                                    <div class="modal-content admin-txn-edit-content">
                                         <form method="post" action="/admin/transactions/edit/@transactionNumericId">
                                             @Html.AntiForgeryToken()
 
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Edit Transaction</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            <div class="admin-txn-edit-header">
+                                                <h5 class="admin-txn-edit-title">Edit Transaction</h5>
+                                                <button type="button" class="admin-txn-edit-close" data-bs-dismiss="modal">&times;</button>
                                             </div>
 
-                                            <div class="modal-body">
+                                            <div class="admin-txn-edit-body">
                                                 <div class="admin-edit-field">
                                                     <label>Amount</label>
                                                     <input type="number"
@@ -148,6 +229,7 @@
                                                     <input type="text"
                                                            name="ReferenceNum"
                                                            class="admin-edit-input"
+                                                           placeholder="N/A"
                                                            value="@t.Reference" />
                                                 </div>
 
@@ -161,14 +243,9 @@
                                                 </div>
                                             </div>
 
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                    Cancel
-                                                </button>
-
-                                                <button type="submit" class="btn btn-primary" style="background:#111827; border:none;">
-                                                    Save Changes
-                                                </button>
+                                            <div class="admin-txn-edit-footer">
+                                                <button type="button" class="admin-txn-cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="admin-txn-save-btn">Save Changes</button>
                                             </div>
                                         </form>
                                     </div>
@@ -181,3 +258,12 @@
         </tbody>
     </table>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleTxnFilter() {
+            const panel = document.getElementById('adminTxnFilterPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+}
